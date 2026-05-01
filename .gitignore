@@ -1,0 +1,6 @@
+.vercel
+.DS_Store
+*.log
+__pycache__/
+*.pyc
+.pytest_cache/

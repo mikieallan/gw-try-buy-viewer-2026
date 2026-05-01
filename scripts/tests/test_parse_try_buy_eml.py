@@ -1,0 +1,88 @@
+import tempfile
+import textwrap
+import unittest
+from pathlib import Path
+
+from scripts.parse_try_buy_eml import (
+    extract_gw_meta,
+    extract_wines_from_tokens,
+    parse_eml_plaintext,
+    parse_gw_product_title,
+    split_wine_section,
+)
+
+
+SAMPLE_EML = textwrap.dedent(
+    """\
+    From: demo@example.com
+    To: demo@example.com
+    Subject: Try & Buy FAQ
+    MIME-Version: 1.0
+    Content-Type: text/plain; charset="UTF-8"
+    Content-Transfer-Encoding: quoted-printable
+
+    Intro section
+    WINE LIST
+    Canadian Cuties
+    Revel x GW =E2=80=98Chambarine=E2=80=99 Nectarine, Chambourcin & Apple, Guelph, Ontario
+    https://grapewitches.com/products/revel-chambarine
+    Salty & Savoury
+    Clai =E2=80=98Baracija=E2=80=99 Malvasia, Istria, Croatia
+    https://grapewitches.com/products/clai-baracija
+    Website https://www.grapewitches.com/
+    """
+)
+
+
+class ParseTryBuyEmlTests(unittest.TestCase):
+    def test_parse_and_extract_records(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            eml_path = Path(tmp) / "sample.eml"
+            eml_path.write_text(SAMPLE_EML, encoding="utf-8")
+            plain = parse_eml_plaintext(eml_path)
+            tokens = split_wine_section(plain)
+            records = extract_wines_from_tokens(tokens)
+
+        self.assertEqual(len(records), 2)
+        self.assertEqual(records[0].category, "Canadian Cuties")
+        self.assertEqual(records[1].category, "Salty & Savoury")
+        self.assertEqual(records[0].grape_witches_url, "https://grapewitches.com/products/revel-chambarine")
+        self.assertIn("Chambarine", records[0].raw_wine_line)
+
+    def test_handles_smart_quotes_decoding(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            eml_path = Path(tmp) / "sample.eml"
+            eml_path.write_text(SAMPLE_EML, encoding="utf-8")
+            plain = parse_eml_plaintext(eml_path)
+        self.assertIn("'Chambarine'", plain)
+
+    def test_extract_gw_thumbnail_from_meta(self) -> None:
+        html = """
+        <meta property="og:title" content="Revel Chambarine">
+        <meta property="og:description" content="Juicy and bright.">
+        <meta property="og:image" content="https://cdn.grapewitches.com/image.jpg">
+        <meta property="product:price:amount" content="41.00">
+        """
+        title, description, thumb, price, excerpt = extract_gw_meta(html)
+        self.assertEqual(title, "Revel Chambarine")
+        self.assertEqual(description, "Juicy and bright.")
+        self.assertEqual(thumb, "https://cdn.grapewitches.com/image.jpg")
+        self.assertEqual(price, "$41.00")
+        self.assertIsNone(excerpt)
+
+    def test_extract_gw_price_cents_metadata(self) -> None:
+        html = """<meta property="product:price:amount" content="2300">"""
+        _, _, _, price, _ = extract_gw_meta(html)
+        self.assertEqual(price, "$23.00")
+
+    def test_parse_gw_product_title_splits_winery_wine_grape_region(self) -> None:
+        title = "Laurent Saillard 'Blank' Sauvignon Blanc Loire"
+        parts = parse_gw_product_title(title)
+        self.assertEqual(parts["winery"], "Laurent Saillard")
+        self.assertEqual(parts["wine"], "Blank")
+        self.assertEqual(parts["grapes"], "Sauvignon Blanc")
+        self.assertEqual(parts["region"], "Loire")
+
+
+if __name__ == "__main__":
+    unittest.main()

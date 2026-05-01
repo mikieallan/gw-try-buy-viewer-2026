@@ -1,0 +1,509 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Try & Buy · Grape Witches</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --gw-font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans", "Liberation Sans", Arial, sans-serif;
+        --gw-bg: #f7f6f0;
+        --gw-surface: #ffffff;
+        --gw-surface-muted: #eeecdf;
+        --gw-text: #1a1a1a;
+        --gw-heading: #42361d;
+        --gw-teal: #123f3d;
+        --gw-teal-hover: #1d6763;
+        --gw-teal-deep: #0c2b2a;
+        --gw-border: #c9c9ba;
+        --gw-border-soft: #e5e3db;
+        --gw-muted: rgba(66, 54, 29, 0.72);
+        --gw-radius: 15px;
+        --gw-radius-pill: 50px;
+        --gw-shadow: 0 2px 12px rgba(18, 63, 61, 0.08);
+        --gw-shadow-hover: 0 6px 20px rgba(18, 63, 61, 0.12);
+        --gw-focus-ring: 0 0 0 3px rgba(18, 63, 61, 0.28);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: var(--gw-font);
+        font-size: 17px;
+        line-height: 1.5;
+        color: var(--gw-text);
+        background: var(--gw-bg);
+      }
+
+      .site-banner {
+        background: var(--gw-teal);
+        color: #f7f6f0;
+        text-align: center;
+        font-size: 14px;
+        letter-spacing: 0.02em;
+        padding: 10px 16px;
+      }
+
+      .container {
+        max-width: 1280px;
+        margin: 0 auto;
+        padding: 24px 20px 40px;
+      }
+
+      .page-header h1 {
+        margin: 0 0 6px;
+        font-size: clamp(26px, 4vw, 34px);
+        font-weight: 400;
+        letter-spacing: 0.01em;
+        color: var(--gw-heading);
+      }
+
+      .muted {
+        color: var(--gw-muted);
+        font-size: 15px;
+      }
+
+      .muted code {
+        font-size: 0.88em;
+        padding: 2px 6px;
+        border-radius: 6px;
+        background: var(--gw-surface-muted);
+        border: 1px solid var(--gw-border-soft);
+        color: var(--gw-teal-deep);
+      }
+
+      .toolbar {
+        display: grid;
+        gap: 12px;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        margin: 20px 0 14px;
+      }
+
+      input,
+      select,
+      button {
+        padding: 11px 18px;
+        border-radius: var(--gw-radius-pill);
+        border: 1px solid var(--gw-border);
+        background: var(--gw-surface);
+        color: var(--gw-text);
+        font-family: inherit;
+        font-size: 15px;
+        transition: border-color 0.15s ease, box-shadow 0.15s ease;
+      }
+
+      input::placeholder {
+        color: var(--gw-muted);
+      }
+
+      input:hover,
+      select:hover {
+        border-color: rgba(18, 63, 61, 0.35);
+      }
+
+      input:focus,
+      select:focus,
+      button:focus-visible {
+        outline: none;
+        border-color: var(--gw-teal);
+        box-shadow: var(--gw-focus-ring);
+      }
+
+      button {
+        background: var(--gw-teal);
+        color: #f7f6f0;
+        border-color: var(--gw-teal);
+        cursor: pointer;
+        font-weight: 500;
+      }
+
+      button:hover {
+        background: var(--gw-teal-hover);
+        border-color: var(--gw-teal-hover);
+      }
+
+      button:focus-visible {
+        box-shadow: var(--gw-focus-ring);
+      }
+
+      .pill {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: var(--gw-radius-pill);
+        border: 1px solid rgba(18, 63, 61, 0.35);
+        background: rgba(18, 63, 61, 0.06);
+        color: var(--gw-teal-deep);
+        font-size: 12px;
+        font-weight: 500;
+      }
+
+      .small {
+        font-size: 13px;
+      }
+
+      .gw-lines {
+        margin: 8px 0 6px;
+        font-size: 13px;
+        line-height: 1.5;
+        color: var(--gw-text);
+      }
+
+      .gw-lines .lbl {
+        display: inline-block;
+        min-width: 3.2rem;
+        color: var(--gw-muted);
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        margin-right: 6px;
+        vertical-align: top;
+      }
+
+      .category-section {
+        margin-top: 28px;
+        padding-top: 8px;
+        border-top: 1px solid var(--gw-border-soft);
+      }
+
+      .category-section:first-of-type {
+        border-top: none;
+        padding-top: 0;
+      }
+
+      .category-header {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        margin-bottom: 12px;
+        border-left: 4px solid var(--gw-teal);
+        padding-left: 12px;
+      }
+
+      .category-title {
+        font-size: 1.25rem;
+        font-weight: 400;
+        margin: 0;
+        color: var(--gw-heading);
+        letter-spacing: 0.02em;
+      }
+
+      .category-count {
+        color: var(--gw-muted);
+        font-size: 14px;
+      }
+
+      .cards-row {
+        display: flex;
+        gap: 14px;
+        overflow-x: auto;
+        padding: 4px 2px 12px;
+        scroll-snap-type: x mandatory;
+        scrollbar-color: var(--gw-border) transparent;
+      }
+
+      .wine-card {
+        width: 280px;
+        min-width: 280px;
+        border: 1px solid var(--gw-border);
+        border-radius: var(--gw-radius);
+        overflow: hidden;
+        background: var(--gw-surface);
+        scroll-snap-align: start;
+        box-shadow: var(--gw-shadow);
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+      }
+
+      .wine-card:hover {
+        border-color: rgba(18, 63, 61, 0.45);
+        box-shadow: var(--gw-shadow-hover);
+      }
+
+      .thumb-wrap {
+        height: 320px;
+        background: var(--gw-surface-muted);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 14px;
+        border-bottom: 1px solid var(--gw-border-soft);
+      }
+
+      .thumb-wrap img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+      }
+
+      .thumb-empty {
+        font-size: 13px;
+        color: var(--gw-muted);
+      }
+
+      .card-body {
+        padding: 14px;
+      }
+
+      .card-title {
+        margin: 0 0 6px;
+        font-size: 15px;
+        line-height: 1.3;
+        color: var(--gw-heading);
+        font-weight: 500;
+      }
+
+      .card-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 10px;
+      }
+
+      .links {
+        margin-top: 4px;
+      }
+
+      .links a {
+        margin-right: 14px;
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--gw-teal);
+        text-decoration: none;
+      }
+
+      .links a:hover {
+        color: var(--gw-teal-hover);
+        text-decoration: underline;
+      }
+
+      .links a:focus-visible {
+        outline: none;
+        border-radius: 4px;
+        box-shadow: var(--gw-focus-ring);
+      }
+
+      .desc {
+        margin-top: 10px;
+        font-size: 12px;
+        line-height: 1.5;
+        color: var(--gw-muted);
+      }
+
+      .empty {
+        margin-top: 24px;
+        border: 1px dashed var(--gw-border);
+        border-radius: var(--gw-radius);
+        padding: 22px;
+        text-align: center;
+        color: var(--gw-muted);
+        background: var(--gw-surface);
+      }
+
+      #stats {
+        color: var(--gw-muted);
+        margin-bottom: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="site-banner">Try &amp; Buy tasting list · Grape Witches</div>
+    <div class="container">
+      <header class="page-header">
+        <h1>Wine list</h1>
+        <div class="muted">Local viewer · data from <code>data/try_buy_wines_enriched.json</code></div>
+      </header>
+
+      <div class="toolbar">
+        <input id="searchInput" type="text" placeholder="Search name/producer/cuvee..." />
+        <select id="categoryFilter">
+          <option value="">All categories</option>
+        </select>
+        <button id="resetBtn" type="button">Reset</button>
+      </div>
+
+      <div id="stats" class="small muted"></div>
+
+      <div id="categoryGroups"></div>
+    </div>
+
+    <script>
+      const state = {
+        all: [],
+        filtered: [],
+      };
+
+      function text(value) {
+        return (value ?? "").toString();
+      }
+
+      function populateCategories(data) {
+        const select = document.getElementById("categoryFilter");
+        const categories = [...new Set(data.map((r) => r.category).filter(Boolean))].sort();
+        for (const c of categories) {
+          const opt = document.createElement("option");
+          opt.value = c;
+          opt.textContent = c;
+          select.appendChild(opt);
+        }
+      }
+
+      function groupByCategory(data) {
+        const grouped = new Map();
+        for (const row of data) {
+          const key = row.category || "Uncategorized";
+          if (!grouped.has(key)) {
+            grouped.set(key, []);
+          }
+          grouped.get(key).push(row);
+        }
+        return [...grouped.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+      }
+
+      function renderRows(data) {
+        const groupsRoot = document.getElementById("categoryGroups");
+        groupsRoot.innerHTML = "";
+        const grouped = groupByCategory(data);
+        if (grouped.length === 0) {
+          groupsRoot.innerHTML = `<div class="empty">No wines match your current filters.</div>`;
+          return;
+        }
+
+        for (const [category, rows] of grouped) {
+          const section = document.createElement("section");
+          section.className = "category-section";
+
+          const cardsHtml = rows.map((r) => {
+            const displayName = r.normalized_name || r.raw_wine_line || "(unknown)";
+            const hasVivino = r.vivino_url != null && String(r.vivino_url).trim() !== "";
+            const hasRating = r.vivino_rating != null;
+            const ratingPill =
+              hasRating
+                ? `<span class="pill">${escapeHtml(String(r.vivino_rating))} (${escapeHtml(String(r.vivino_num_ratings ?? "-"))})</span>`
+                : "";
+            const vivinoLink = hasVivino
+              ? `<a href="${escapeAttr(text(r.vivino_url))}" target="_blank" rel="noopener">Vivino</a>`
+              : "";
+            const description = text(r.gw_description).slice(0, 220);
+            const thumb = text(r.gw_thumbnail_url);
+            const thumbHtml = thumb
+              ? `<img loading="lazy" src="${escapeAttr(thumb)}" alt="${escapeAttr(displayName)}" />`
+              : `<div class="thumb-empty">No thumbnail</div>`;
+
+            const w = r.gw_winery_display;
+            const wine = r.gw_wine_display;
+            const grapes = r.gw_grape_display;
+            const region = r.gw_region_display;
+            const hasParsed = w || wine || grapes || region;
+            const titleBlock = hasParsed
+              ? `<div class="gw-lines">
+                  ${w ? `<div><span class="lbl">Winery</span>${escapeHtml(w)}</div>` : ""}
+                  ${wine ? `<div><span class="lbl">Wine</span>‘${escapeHtml(wine)}’</div>` : ""}
+                  ${grapes ? `<div><span class="lbl">Grape</span>${escapeHtml(grapes)}</div>` : ""}
+                  ${region ? `<div><span class="lbl">Region</span>${escapeHtml(region)}</div>` : ""}
+                </div>`
+              : `<h3 class="card-title">${escapeHtml(displayName)}</h3>
+                 <div class="small muted">${escapeHtml(text(r.producer))} · ${escapeHtml(text(r.cuvee))}</div>`;
+
+            return `
+              <article class="wine-card">
+                <div class="thumb-wrap">${thumbHtml}</div>
+                <div class="card-body">
+                  ${titleBlock}
+                  <div class="card-meta">
+                    <span class="pill">${escapeHtml(text(r.gw_price || "-"))}</span>
+                    ${ratingPill}
+                  </div>
+                  <div class="links">
+                    <a href="${escapeAttr(text(r.grape_witches_url))}" target="_blank" rel="noopener">Grape Witches</a>
+                    ${vivinoLink}
+                  </div>
+                  <div class="desc">${escapeHtml(description)}</div>
+                </div>
+              </article>
+            `;
+          }).join("");
+
+          section.innerHTML = `
+            <div class="category-header">
+              <h2 class="category-title">${escapeHtml(category)}</h2>
+              <div class="category-count">${rows.length} wines</div>
+            </div>
+            <div class="cards-row">${cardsHtml}</div>
+          `;
+          groupsRoot.appendChild(section);
+        }
+      }
+
+      function renderStats() {
+        const all = state.all.length;
+        const shown = state.filtered.length;
+        const withVivino = state.filtered.filter((x) => x.vivino_url).length;
+        document.getElementById("stats").textContent = `Showing ${shown}/${all} wines • ${withVivino} with Vivino link`;
+      }
+
+      function applyFilters() {
+        const q = document.getElementById("searchInput").value.trim().toLowerCase();
+        const category = document.getElementById("categoryFilter").value;
+
+        state.filtered = state.all.filter((r) => {
+          const haystack = [
+            r.normalized_name,
+            r.raw_wine_line,
+            r.producer,
+            r.cuvee,
+            r.gw_title,
+            r.gw_winery_display,
+            r.gw_wine_display,
+          ].map(text).join(" ").toLowerCase();
+          if (q && !haystack.includes(q)) return false;
+          if (category && r.category !== category) return false;
+          return true;
+        });
+
+        renderRows(state.filtered);
+        renderStats();
+      }
+
+      function resetFilters() {
+        document.getElementById("searchInput").value = "";
+        document.getElementById("categoryFilter").value = "";
+        applyFilters();
+      }
+
+      function escapeHtml(str) {
+        return String(str)
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;");
+      }
+
+      function escapeAttr(str) {
+        return String(str).replaceAll('"', "&quot;");
+      }
+
+      async function init() {
+        const response = await fetch("/data/try_buy_wines_enriched.json", { cache: "no-store" });
+        if (!response.ok) {
+          throw new Error(`Could not load data file (${response.status}). Run the parser first.`);
+        }
+        const data = await response.json();
+        state.all = data;
+        populateCategories(state.all);
+        applyFilters();
+      }
+
+      for (const id of ["searchInput", "categoryFilter"]) {
+        document.getElementById(id).addEventListener("input", applyFilters);
+        document.getElementById(id).addEventListener("change", applyFilters);
+      }
+      document.getElementById("resetBtn").addEventListener("click", resetFilters);
+
+      init().catch((err) => {
+        document.getElementById("stats").textContent = err.message;
+      });
+    </script>
+  </body>
+</html>
