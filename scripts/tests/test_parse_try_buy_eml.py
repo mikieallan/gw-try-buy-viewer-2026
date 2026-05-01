@@ -70,6 +70,34 @@ class ParseTryBuyEmlTests(unittest.TestCase):
         self.assertEqual(price, "$41.00")
         self.assertIsNone(excerpt)
 
+    def test_extract_gw_prefers_product_body_over_truncated_og(self) -> None:
+        html = """
+        <meta property="og:title" content="Khush Raho">
+        <meta property="og:description" content="Viognier, Niagara, Ontario A luscious and lovely viognier skin-contact made in collaboration with one of our favourite local fermenters! Winemaker Nupur Gogia is a wine agent, nice pal, Vinequity co-founder and MW from Toronto! #LetsSeeYourCV? 'Khush' is her flourishing low-intervention wine project named after the Hi">
+        <div class="product__description rte">
+          <p>END of full copy on site with Koh Lipe and porch.</p>
+        </div>
+        """
+        title, description, thumb, price, excerpt = extract_gw_meta(html)
+        self.assertEqual(title, "Khush Raho")
+        self.assertIn("Koh Lipe", description or "")
+        self.assertNotIn("named after the Hi", description or "")
+        self.assertIsNone(thumb)
+        self.assertEqual(description, excerpt)
+
+    def test_extract_gw_prefers_jsonld_product_description(self) -> None:
+        html = """
+        <meta property="og:title" content="Sample">
+        <meta property="og:description" content="Short OG blurb.">
+        <script type="application/ld+json">
+        {"@context":"http://schema.org","@type":"Product","description":"Much longer structured description from JSON-LD including Koh Lipe and the porch."}
+        </script>
+        """
+        _, description, _, _, excerpt = extract_gw_meta(html)
+        self.assertIn("longer structured", description or "")
+        self.assertIn("Koh Lipe", description or "")
+        self.assertEqual(description, excerpt)
+
     def test_extract_gw_price_cents_metadata(self) -> None:
         html = """<meta property="product:price:amount" content="2300">"""
         _, _, _, price, _ = extract_gw_meta(html)

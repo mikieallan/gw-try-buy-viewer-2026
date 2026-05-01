@@ -292,6 +292,171 @@
         color: var(--gw-muted);
       }
 
+      .desc-wrap {
+        margin-top: 10px;
+      }
+
+      button.see-more-btn {
+        margin-top: 8px;
+        padding: 6px 14px;
+        font-size: 12px;
+        font-weight: 500;
+        background: transparent;
+        color: var(--gw-teal);
+        border: 1px solid var(--gw-teal);
+        border-radius: var(--gw-radius-pill);
+        cursor: pointer;
+      }
+
+      button.see-more-btn:hover {
+        background: rgba(18, 63, 61, 0.08);
+        border-color: var(--gw-teal-hover);
+        color: var(--gw-teal-hover);
+      }
+
+      button.see-more-btn:focus-visible {
+        outline: none;
+        box-shadow: var(--gw-focus-ring);
+      }
+
+      .modal {
+        position: fixed;
+        inset: 0;
+        z-index: 1000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        box-sizing: border-box;
+      }
+
+      .modal[hidden] {
+        display: none !important;
+      }
+
+      .modal-backdrop {
+        position: absolute;
+        inset: 0;
+        background: rgba(26, 26, 26, 0.45);
+        cursor: pointer;
+      }
+
+      .modal-dialog {
+        position: relative;
+        z-index: 1;
+        width: 100%;
+        max-width: 520px;
+        max-height: min(88vh, 720px);
+        overflow: auto;
+        background: var(--gw-surface);
+        border-radius: var(--gw-radius);
+        border: 1px solid var(--gw-border);
+        box-shadow: 0 16px 48px rgba(18, 63, 61, 0.18);
+        padding: 20px 22px 22px;
+      }
+
+      .modal-close {
+        position: sticky;
+        top: 0;
+        float: right;
+        margin: -8px -8px 4px 8px;
+        width: 36px;
+        height: 36px;
+        padding: 0;
+        border-radius: 50%;
+        font-size: 22px;
+        line-height: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--gw-surface-muted);
+        border: 1px solid var(--gw-border-soft);
+        color: var(--gw-heading);
+      }
+
+      .modal-close:hover {
+        background: var(--gw-border-soft);
+        border-color: var(--gw-border);
+      }
+
+      .modal-head {
+        margin-bottom: 14px;
+        padding-right: 40px;
+      }
+
+      .modal-category {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--gw-muted);
+        margin: 0 0 6px;
+      }
+
+      .modal-title {
+        margin: 0;
+        font-size: 1.35rem;
+        font-weight: 500;
+        color: var(--gw-heading);
+        line-height: 1.25;
+      }
+
+      .modal-thumb {
+        margin: 0 0 16px;
+        height: 220px;
+        background: var(--gw-surface-muted);
+        border-radius: calc(var(--gw-radius) - 4px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 12px;
+        border: 1px solid var(--gw-border-soft);
+      }
+
+      .modal-thumb img {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+      }
+
+      .modal-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 14px;
+      }
+
+      .modal-desc {
+        font-size: 15px;
+        line-height: 1.55;
+        color: var(--gw-text);
+        margin: 0 0 16px;
+        white-space: pre-wrap;
+      }
+
+      .modal-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px 18px;
+        padding-top: 4px;
+        border-top: 1px solid var(--gw-border-soft);
+      }
+
+      .modal-links a {
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--gw-teal);
+        text-decoration: none;
+      }
+
+      .modal-links a:hover {
+        color: var(--gw-teal-hover);
+        text-decoration: underline;
+      }
+
+      body.modal-open {
+        overflow: hidden;
+      }
+
       .empty {
         margin-top: 24px;
         border: 1px dashed var(--gw-border);
@@ -329,6 +494,21 @@
       <div id="categoryGroups"></div>
     </div>
 
+    <div
+      id="wineModal"
+      class="modal"
+      hidden
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="wineModalTitle"
+    >
+      <div class="modal-backdrop" data-modal-dismiss tabindex="-1"></div>
+      <div class="modal-dialog">
+        <button type="button" class="modal-close" data-modal-dismiss aria-label="Close dialog">×</button>
+        <div id="wineModalBody"></div>
+      </div>
+    </div>
+
     <script>
       const state = {
         all: [],
@@ -362,6 +542,93 @@
         return [...grouped.entries()].sort((a, b) => a[0].localeCompare(b[0]));
       }
 
+      const DESC_PREVIEW_CHARS = 220;
+
+      function truncateForCard(raw) {
+        const t = text(raw).trim();
+        if (t.length <= DESC_PREVIEW_CHARS) {
+          return { preview: t, needsMore: false };
+        }
+        let cut = t.slice(0, DESC_PREVIEW_CHARS);
+        const lastSpace = cut.lastIndexOf(" ");
+        if (lastSpace > DESC_PREVIEW_CHARS * 0.55) {
+          cut = cut.slice(0, lastSpace);
+        }
+        return { preview: cut + "…", needsMore: true };
+      }
+
+      function openWineModal(row) {
+        const modal = document.getElementById("wineModal");
+        const bodyEl = document.getElementById("wineModalBody");
+        const displayName = row.normalized_name || row.raw_wine_line || "(unknown)";
+        const category = row.category || "Uncategorized";
+        const w = row.gw_winery_display;
+        const wine = row.gw_wine_display;
+        const grapes = row.gw_grape_display;
+        const region = row.gw_region_display;
+        const hasParsed = w || wine || grapes || region;
+        const linesBlock = hasParsed
+          ? `<div class="gw-lines">
+              ${w ? `<div><span class="lbl">Winery</span>${escapeHtml(w)}</div>` : ""}
+              ${wine ? `<div><span class="lbl">Wine</span>‘${escapeHtml(wine)}’</div>` : ""}
+              ${grapes ? `<div><span class="lbl">Grape</span>${escapeHtml(grapes)}</div>` : ""}
+              ${region ? `<div><span class="lbl">Region</span>${escapeHtml(region)}</div>` : ""}
+            </div>`
+          : `<p class="small muted" style="margin:0 0 10px">${escapeHtml(text(row.producer))} · ${escapeHtml(
+              text(row.cuvee),
+            )}</p>`;
+
+        const hasVivino = row.vivino_url != null && String(row.vivino_url).trim() !== "";
+        const hasRating = row.vivino_rating != null;
+        const ratingPill = hasRating
+          ? `<span class="pill">${escapeHtml(String(row.vivino_rating))} ⭐ (${escapeHtml(String(row.vivino_num_ratings ?? "-"))})</span>`
+          : "";
+        const thumb = text(row.gw_thumbnail_url);
+        const thumbBlock = thumb
+          ? `<div class="modal-thumb"><img src="${escapeAttr(thumb)}" alt="${escapeAttr(displayName)}" /></div>`
+          : "";
+
+        const desc = text(row.gw_description).trim();
+        const descBlock = desc
+          ? `<p class="modal-desc">${escapeHtml(desc)}</p>`
+          : `<p class="modal-desc muted">No description on file.</p>`;
+
+        const vivinoLink = hasVivino
+          ? `<a href="${escapeAttr(text(row.vivino_url))}" target="_blank" rel="noopener">Open on Vivino</a>`
+          : "";
+
+        bodyEl.innerHTML = `
+          <header class="modal-head">
+            <p class="modal-category">${escapeHtml(category)}</p>
+            <h2 id="wineModalTitle" class="modal-title">${escapeHtml(displayName)}</h2>
+          </header>
+          ${thumbBlock}
+          ${linesBlock}
+          <div class="modal-meta">
+            <span class="pill">${escapeHtml(text(row.gw_price || "-"))}</span>
+            ${ratingPill}
+          </div>
+          ${descBlock}
+          <div class="modal-links">
+            <a href="${escapeAttr(text(row.grape_witches_url))}" target="_blank" rel="noopener">Grape Witches product page</a>
+            ${vivinoLink}
+          </div>
+        `;
+
+        modal.hidden = false;
+        document.body.classList.add("modal-open");
+        const closeBtn = modal.querySelector(".modal-close");
+        if (closeBtn) {
+          closeBtn.focus();
+        }
+      }
+
+      function closeWineModal() {
+        const modal = document.getElementById("wineModal");
+        modal.hidden = true;
+        document.body.classList.remove("modal-open");
+      }
+
       function renderRows(data) {
         const groupsRoot = document.getElementById("categoryGroups");
         groupsRoot.innerHTML = "";
@@ -381,12 +648,14 @@
             const hasRating = r.vivino_rating != null;
             const ratingPill =
               hasRating
-                ? `<span class="pill">${escapeHtml(String(r.vivino_rating))} (${escapeHtml(String(r.vivino_num_ratings ?? "-"))})</span>`
+                ? `<span class="pill">${escapeHtml(String(r.vivino_rating))} ⭐ (${escapeHtml(String(r.vivino_num_ratings ?? "-"))})</span>`
                 : "";
             const vivinoLink = hasVivino
               ? `<a href="${escapeAttr(text(r.vivino_url))}" target="_blank" rel="noopener">Vivino</a>`
               : "";
-            const description = text(r.gw_description).slice(0, 220);
+            const description = text(r.gw_description);
+            const { preview: descPreview, needsMore: descNeedsMore } = truncateForCard(description);
+            const gwUrl = text(r.grape_witches_url);
             const thumb = text(r.gw_thumbnail_url);
             const thumbHtml = thumb
               ? `<img loading="lazy" src="${escapeAttr(thumb)}" alt="${escapeAttr(displayName)}" />`
@@ -417,10 +686,17 @@
                     ${ratingPill}
                   </div>
                   <div class="links">
-                    <a href="${escapeAttr(text(r.grape_witches_url))}" target="_blank" rel="noopener">Grape Witches</a>
+                    <a href="${escapeAttr(gwUrl)}" target="_blank" rel="noopener">Grape Witches</a>
                     ${vivinoLink}
                   </div>
-                  <div class="desc">${escapeHtml(description)}</div>
+                  <div class="desc-wrap">
+                    <div class="desc">${escapeHtml(descNeedsMore ? descPreview : description)}</div>
+                    ${
+                      descNeedsMore
+                        ? `<button type="button" class="see-more-btn" data-see-more="${escapeAttr(gwUrl)}">See more</button>`
+                        : ""
+                    }
+                  </div>
                 </div>
               </article>
             `;
@@ -481,7 +757,11 @@
       }
 
       function escapeAttr(str) {
-        return String(str).replaceAll('"', "&quot;");
+        return String(str)
+          .replaceAll("&", "&amp;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#39;")
+          .replaceAll("<", "&lt;");
       }
 
       async function init() {
@@ -500,6 +780,35 @@
         document.getElementById(id).addEventListener("change", applyFilters);
       }
       document.getElementById("resetBtn").addEventListener("click", resetFilters);
+
+      document.getElementById("categoryGroups").addEventListener("click", (ev) => {
+        const btn = ev.target.closest("button[data-see-more]");
+        if (!btn) {
+          return;
+        }
+        ev.preventDefault();
+        const url = btn.getAttribute("data-see-more");
+        const row = state.all.find((r) => r.grape_witches_url === url);
+        if (row) {
+          openWineModal(row);
+        }
+      });
+
+      document.getElementById("wineModal").addEventListener("click", (ev) => {
+        if (ev.target.closest("[data-modal-dismiss]")) {
+          closeWineModal();
+        }
+      });
+
+      document.addEventListener("keydown", (ev) => {
+        if (ev.key !== "Escape") {
+          return;
+        }
+        const modal = document.getElementById("wineModal");
+        if (!modal.hidden) {
+          closeWineModal();
+        }
+      });
 
       init().catch((err) => {
         document.getElementById("stats").textContent = err.message;

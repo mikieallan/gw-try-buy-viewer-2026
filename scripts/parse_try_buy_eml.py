@@ -9,7 +9,7 @@ import json
 import random
 import re
 import time
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, fields
 from email import policy
 from email.parser import BytesParser
 from html import unescape
@@ -126,6 +126,50 @@ def normalize_text(text: str) -> str:
     text = text.replace("\xa0", " ")
     text = re.sub(r"\s+", " ", text)
     return text.strip()
+
+
+def _jsonld_collect_product_descriptions(node: object, out: list[str]) -> None:
+    if isinstance(node, dict):
+        types = node.get("@type")
+        type_names: set[str] = set()
+        if isinstance(types, str):
+            type_names.add(types.lower())
+        elif isinstance(types, list):
+            for t in types:
+                if isinstance(t, str):
+                    type_names.add(t.lower())
+        if "product" in type_names:
+            desc = node.get("description")
+            if isinstance(desc, str) and desc.strip():
+                out.append(desc)
+        for val in node.values():
+            _jsonld_collect_product_descriptions(val, out)
+    elif isinstance(node, list):
+        for item in node:
+            _jsonld_collect_product_descriptions(item, out)
+
+
+def extract_product_description_from_jsonld(html: str) -> str | None:
+    """Best-effort full product copy from schema.org JSON-LD (Shopify exposes this)."""
+    best: str | None = None
+    for m in re.finditer(
+        r'<script type="application/ld\+json">(.*?)</script>',
+        html,
+        flags=re.DOTALL | re.IGNORECASE,
+    ):
+        raw = m.group(1).strip()
+        if not raw:
+            continue
+        try:
+            data = json.loads(raw)
+        except json.JSONDecodeError:
+            continue
+        found: list[str] = []
+        _jsonld_collect_product_descriptions(data, found)
+        for d in found:
+            if best is None or len(d) > len(best):
+                best = d
+    return best
 
 
 def normalize_price(raw_price: str) -> str:
@@ -309,9 +353,14 @@ def extract_gw_meta(html: str) -> tuple[str | None, str | None, str | None, str 
     title_match = re.search(r'<meta property="og:title" content="([^"]+)"', html)
     if title_match:
         title = normalize_text(title_match.group(1))
+    og_desc = None
     desc_match = re.search(r'<meta property="og:description" content="([^"]+)"', html)
     if desc_match:
-        desc = normalize_text(desc_match.group(1))
+        og_desc = normalize_text(desc_match.group(1))
+    ld_raw = extract_product_description_from_jsonld(html)
+    ld_desc = None
+    if ld_raw:
+        ld_desc = normalize_text(re.sub(r"<[^>]+>", " ", ld_raw))
     image_match = re.search(r'<meta property="og:image" content="([^"]+)"', html)
     if image_match:
         thumbnail = normalize_text(image_match.group(1))
@@ -327,10 +376,20 @@ def extract_gw_meta(html: str) -> tuple[str | None, str | None, str | None, str 
         html,
         flags=re.IGNORECASE | re.DOTALL,
     )
+    body_excerpt = None
     if body_match:
-        excerpt = normalize_text(re.sub(r"<[^>]+>", " ", body_match.group(1)))
-        if not desc:
-            desc = excerpt
+        body_excerpt = normalize_text(re.sub(r"<[^>]+>", " ", body_match.group(1)))
+
+    if ld_desc and body_excerpt:
+        desc = ld_desc if len(ld_desc) >= len(body_excerpt) else body_excerpt
+    elif ld_desc:
+        desc = ld_desc
+    elif body_excerpt:
+        desc = body_excerpt
+    else:
+        desc = og_desc
+
+    excerpt = body_excerpt or ld_desc
     return title, desc, thumbnail, price, excerpt
 
 
@@ -475,8 +534,24 @@ def confidence_from_score(score: float) -> str:
     return "low"
 
 
+def wine_records_from_enriched_json(path: Path) -> list[WineRecord]:
+    """Rebuild pipeline records from a prior JSON export (for re-enrichment without the .eml)."""
+    raw = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(raw, list):
+        raise ValueError(f"Expected a JSON array in {path}")
+    names = {f.name for f in fields(WineRecord)}
+    out: list[WineRecord] = []
+    for item in raw:
+        if not isinstance(item, dict):
+            continue
+        kwargs = {k: item[k] for k in names if k in item}
+        out.append(WineRecord(**kwargs))
+    return out
+
+
 def enrich_records(records: list[WineRecord], fetcher: Callable[[str], str], delay_ms: int, max_pages: int) -> None:
     for record in records:
+        record.vivino_candidates = []
         try:
             gw_html = fetcher(record.grape_witches_url)
             title, desc, thumbnail, price, excerpt = extract_gw_meta(gw_html)
@@ -613,10 +688,13 @@ def print_dry_run_summary(records: list[WineRecord]) -> None:
 
 
 def run_pipeline(args: argparse.Namespace) -> int:
-    eml_path = Path(args.input_eml)
-    plain_text = parse_eml_plaintext(eml_path)
-    tokens = split_wine_section(plain_text)
-    records = extract_wines_from_tokens(tokens)
+    if args.from_json:
+        records = wine_records_from_enriched_json(Path(args.from_json))
+    else:
+        eml_path = Path(args.input_eml)
+        plain_text = parse_eml_plaintext(eml_path)
+        tokens = split_wine_section(plain_text)
+        records = extract_wines_from_tokens(tokens)
     enrich_records(records, lambda u: fetch_url(u, delay_ms=args.delay_ms), args.delay_ms, args.max_pages)
     if args.dry_run:
         print_dry_run_summary(records)
@@ -628,7 +706,15 @@ def run_pipeline(args: argparse.Namespace) -> int:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Parse Try & Buy FAQ .eml and enrich wine details.")
-    parser.add_argument("--input-eml", required=True, help="Path to the Try & Buy FAQ .eml file.")
+    parser.add_argument(
+        "--input-eml",
+        help="Path to the Try & Buy FAQ .eml file (required unless --from-json is set).",
+    )
+    parser.add_argument(
+        "--from-json",
+        metavar="PATH",
+        help="Re-enrich wines from an existing try_buy_wines_enriched.json (skips .eml parsing).",
+    )
     parser.add_argument(
         "--output-json",
         default="data/try_buy_wines_enriched.json",
@@ -646,4 +732,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 if __name__ == "__main__":
-    raise SystemExit(run_pipeline(build_parser().parse_args()))
+    args = build_parser().parse_args()
+    if bool(args.from_json) == bool(args.input_eml):
+        build_parser().error("Specify exactly one of: --input-eml or --from-json")
+    raise SystemExit(run_pipeline(args))
