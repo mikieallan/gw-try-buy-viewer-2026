@@ -23,10 +23,12 @@ def main() -> int:
         def do_GET(self) -> None:
             if self.path in ("/", "/viewer"):
                 self.path = "/index.html"
+            elif self.path in ("/list", "/list/"):
+                self.path = "/list.html"
             super().do_GET()
 
     server = ThreadingHTTPServer((args.host, args.port), Handler)
-    print(f"Serving Try & Buy viewer at http://{args.host}:{args.port}/viewer")
+    print(f"Serving Try & Buy viewer at http://{args.host}:{args.port}/viewer (list: /list)")
     print("Press Ctrl+C to stop.")
     try:
         server.serve_forever()

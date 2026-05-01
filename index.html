@@ -76,13 +76,6 @@
         color: var(--gw-teal-deep);
       }
 
-      .toolbar {
-        display: grid;
-        gap: 12px;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        margin: 20px 0 14px;
-      }
-
       input,
       select,
       button {
@@ -629,29 +622,41 @@
         background: var(--gw-surface);
       }
 
-      #stats {
-        color: var(--gw-muted);
-        margin-bottom: 4px;
+      .page-nav {
+        margin-bottom: 18px;
+        font-size: 15px;
+      }
+
+      .page-nav a {
+        color: var(--gw-teal);
+        font-weight: 500;
+        text-decoration: none;
+      }
+
+      .page-nav a:hover {
+        color: var(--gw-teal-hover);
+        text-decoration: underline;
+      }
+
+      .page-nav a[aria-current="page"] {
+        color: var(--gw-heading);
+        font-weight: 600;
+        text-decoration: none;
       }
     </style>
   </head>
   <body>
     <div class="site-banner">Try &amp; Buy tasting list · Grape Witches</div>
     <div class="container">
+      <nav class="page-nav" aria-label="Views">
+        <a href="index.html" aria-current="page">Card view</a>
+        <span aria-hidden="true"> · </span>
+        <a href="list.html">List view</a>
+      </nav>
+
       <header class="page-header">
         <h1>Wine list</h1>
-        <div class="muted">Local viewer · data from <code>data/try_buy_wines_enriched.json</code></div>
       </header>
-
-      <div class="toolbar">
-        <input id="searchInput" type="text" placeholder="Search name/producer/cuvee..." />
-        <select id="categoryFilter">
-          <option value="">All categories</option>
-        </select>
-        <button id="resetBtn" type="button">Reset</button>
-      </div>
-
-      <div id="stats" class="small muted"></div>
 
       <div id="categoryGroups"></div>
     </div>
@@ -674,22 +679,10 @@
     <script>
       const state = {
         all: [],
-        filtered: [],
       };
 
       function text(value) {
         return (value ?? "").toString();
-      }
-
-      function populateCategories(data) {
-        const select = document.getElementById("categoryFilter");
-        const categories = [...new Set(data.map((r) => r.category).filter(Boolean))].sort();
-        for (const c of categories) {
-          const opt = document.createElement("option");
-          opt.value = c;
-          opt.textContent = c;
-          select.appendChild(opt);
-        }
       }
 
       function groupByCategory(data) {
@@ -943,42 +936,6 @@
         }
       }
 
-      function renderStats() {
-        const all = state.all.length;
-        const shown = state.filtered.length;
-        const withVivino = state.filtered.filter((x) => x.vivino_url).length;
-        document.getElementById("stats").textContent = `Showing ${shown}/${all} wines • ${withVivino} with Vivino link`;
-      }
-
-      function applyFilters() {
-        const q = document.getElementById("searchInput").value.trim().toLowerCase();
-        const category = document.getElementById("categoryFilter").value;
-
-        state.filtered = state.all.filter((r) => {
-          const haystack = [
-            r.normalized_name,
-            r.raw_wine_line,
-            r.producer,
-            r.cuvee,
-            r.gw_title,
-            r.gw_winery_display,
-            r.gw_wine_display,
-          ].map(text).join(" ").toLowerCase();
-          if (q && !haystack.includes(q)) return false;
-          if (category && r.category !== category) return false;
-          return true;
-        });
-
-        renderRows(state.filtered);
-        renderStats();
-      }
-
-      function resetFilters() {
-        document.getElementById("searchInput").value = "";
-        document.getElementById("categoryFilter").value = "";
-        applyFilters();
-      }
-
       function escapeHtml(str) {
         return String(str)
           .replaceAll("&", "&amp;")
@@ -1001,15 +958,8 @@
         }
         const data = await response.json();
         state.all = data;
-        populateCategories(state.all);
-        applyFilters();
+        renderRows(state.all);
       }
-
-      for (const id of ["searchInput", "categoryFilter"]) {
-        document.getElementById(id).addEventListener("input", applyFilters);
-        document.getElementById(id).addEventListener("change", applyFilters);
-      }
-      document.getElementById("resetBtn").addEventListener("click", resetFilters);
 
       document.getElementById("categoryGroups").addEventListener("click", (ev) => {
         const btn = ev.target.closest("button[data-see-more]");
@@ -1041,7 +991,7 @@
       });
 
       init().catch((err) => {
-        document.getElementById("stats").textContent = err.message;
+        document.getElementById("categoryGroups").innerHTML = `<div class="empty">${escapeHtml(err.message)}</div>`;
       });
     </script>
   </body>
