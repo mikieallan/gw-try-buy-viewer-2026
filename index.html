@@ -210,7 +210,7 @@
         min-width: 280px;
         border: 1px solid var(--gw-border);
         border-radius: var(--gw-radius);
-        overflow: hidden;
+        overflow: visible;
         background: var(--gw-surface);
         scroll-snap-align: start;
         box-shadow: var(--gw-shadow);
@@ -230,6 +230,8 @@
         justify-content: center;
         padding: 14px;
         border-bottom: 1px solid var(--gw-border-soft);
+        border-radius: calc(var(--gw-radius) - 1px) calc(var(--gw-radius) - 1px) 0 0;
+        overflow: hidden;
       }
 
       .thumb-wrap img {
@@ -457,6 +459,166 @@
         overflow: hidden;
       }
 
+      .gw-badges-strip {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 10px;
+        align-items: center;
+      }
+
+      .gw-badge-icon-wrap {
+        position: relative;
+        display: inline-flex;
+        line-height: 0;
+        z-index: 1;
+      }
+
+      .gw-badge-icon-wrap:hover,
+      .gw-badge-icon-wrap:focus-within {
+        z-index: 60;
+      }
+
+      .gw-badge-hit {
+        display: inline-flex;
+        padding: 0;
+        margin: 0;
+        border: none;
+        background: transparent;
+        cursor: default;
+        border-radius: 8px;
+        line-height: 0;
+        vertical-align: middle;
+      }
+
+      .gw-badge-hit:focus-visible {
+        outline: none;
+        box-shadow: var(--gw-focus-ring);
+      }
+
+      .gw-badge-icon {
+        width: 36px;
+        height: 36px;
+        object-fit: contain;
+        border-radius: 8px;
+        border: 1px solid var(--gw-border-soft);
+        background: var(--gw-surface-muted);
+        display: block;
+      }
+
+      .gw-badge-tooltip {
+        position: absolute;
+        left: 50%;
+        top: calc(100% + 10px);
+        transform: translateX(-50%);
+        width: max-content;
+        max-width: min(260px, 70vw);
+        padding: 10px 12px;
+        background: var(--gw-surface);
+        color: var(--gw-text);
+        border: 1px solid var(--gw-border);
+        border-radius: 10px;
+        box-shadow: var(--gw-shadow-hover);
+        font-size: 12px;
+        line-height: 1.45;
+        text-align: left;
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+        transition: opacity 0.12s ease, visibility 0.12s ease;
+      }
+
+      /* Small pointer toward the icon */
+      .gw-badge-tooltip::after {
+        content: "";
+        position: absolute;
+        bottom: 100%;
+        left: 50%;
+        margin-left: -6px;
+        border: 6px solid transparent;
+        border-bottom-color: var(--gw-surface);
+        filter: drop-shadow(0 -1px 0 var(--gw-border));
+      }
+
+      .gw-badge-icon-wrap:hover .gw-badge-tooltip,
+      .gw-badge-icon-wrap:focus-within .gw-badge-tooltip {
+        opacity: 1;
+        visibility: visible;
+      }
+
+      .gw-badge-tooltip-title {
+        display: block;
+        font-style: italic;
+        font-weight: 500;
+        color: var(--gw-heading);
+        margin-bottom: 5px;
+      }
+
+      .gw-badge-tooltip-body {
+        display: block;
+        color: var(--gw-text);
+      }
+
+      .gw-badges-modal-section {
+        margin: 0 0 18px;
+        padding-bottom: 4px;
+        border-bottom: 1px solid var(--gw-border-soft);
+      }
+
+      .gw-badges-modal-heading {
+        margin: 0 0 12px;
+        font-size: 13px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--gw-muted);
+      }
+
+      .gw-badges-modal-list {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+
+      .gw-badge-modal-row {
+        display: flex;
+        gap: 12px;
+        align-items: flex-start;
+      }
+
+      .gw-badge-modal-img {
+        flex-shrink: 0;
+        width: 52px;
+        height: 52px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--gw-surface-muted);
+        border-radius: 10px;
+        border: 1px solid var(--gw-border-soft);
+        padding: 4px;
+      }
+
+      .gw-badge-modal-img img {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+      }
+
+      .gw-badge-modal-label {
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--gw-heading);
+        margin-bottom: 4px;
+      }
+
+      .gw-badge-modal-desc {
+        margin: 0;
+        font-size: 14px;
+        line-height: 1.45;
+        color: var(--gw-text);
+      }
+
       .empty {
         margin-top: 24px;
         border: 1px dashed var(--gw-border);
@@ -557,6 +719,71 @@
         return { preview: cut + "…", needsMore: true };
       }
 
+      function slugForBadgesId(url) {
+        const s = text(url)
+          .replace(/^https?:\/\//i, "")
+          .replace(/[^a-zA-Z0-9]+/g, "-")
+          .replace(/^-+|-+$/g, "");
+        return (s || "wine").slice(0, 48);
+      }
+
+      function formatGwBadgesCard(badges, cardSlug) {
+        if (!Array.isArray(badges) || badges.length === 0) {
+          return "";
+        }
+        const slug = cardSlug || "wine";
+        const items = badges
+          .map((b, idx) => {
+            const label = text(b.label);
+            const desc = text(b.description);
+            const img = text(b.image_url);
+            if (!img) {
+              return "";
+            }
+            const tipId = `gw-badge-tip-${slug}-${idx}`;
+            const a11y = [label, desc].filter(Boolean).join(". ") || "Badge";
+            const titleHtml = label
+              ? `<span class="gw-badge-tooltip-title">${escapeHtml(label)}</span>`
+              : "";
+            const bodyHtml = desc ? `<span class="gw-badge-tooltip-body">${escapeHtml(desc)}</span>` : "";
+            return `<span class="gw-badge-icon-wrap">
+              <button type="button" class="gw-badge-hit" aria-describedby="${tipId}" aria-label="${escapeAttr(a11y)}">
+                <img class="gw-badge-icon" src="${escapeAttr(img)}" alt="" loading="lazy" width="36" height="36" />
+              </button>
+              <span id="${tipId}" class="gw-badge-tooltip" role="tooltip">${titleHtml}${bodyHtml}</span>
+            </span>`;
+          })
+          .join("");
+        return items ? `<div class="gw-badges-strip" aria-label="Grape Witches badges">${items}</div>` : "";
+      }
+
+      function formatGwBadgesModal(badges) {
+        if (!Array.isArray(badges) || badges.length === 0) {
+          return "";
+        }
+        const rows = badges
+          .map((b) => {
+            const label = text(b.label);
+            const desc = text(b.description);
+            const img = text(b.image_url);
+            const imgHtml = img
+              ? `<div class="gw-badge-modal-img"><img src="${escapeAttr(img)}" alt="${escapeAttr(label || "Badge")}" width="44" height="44" loading="lazy" /></div>`
+              : `<div class="gw-badge-modal-img" aria-hidden="true"></div>`;
+            return `<div class="gw-badge-modal-row">
+              ${imgHtml}
+              <div class="gw-badge-modal-text">
+                <div class="gw-badge-modal-label">${escapeHtml(label || "Badge")}</div>
+                ${desc ? `<p class="gw-badge-modal-desc">${escapeHtml(desc)}</p>` : ""}
+              </div>
+            </div>`;
+          })
+          .join("");
+        return `<section class="gw-badges-modal-section">
+          <h3 class="gw-badges-modal-heading">Grape Witches badges</h3>
+          <div class="gw-badges-modal-list">${rows}</div>
+        </section>`;
+      }
+
       function openWineModal(row) {
         const modal = document.getElementById("wineModal");
         const bodyEl = document.getElementById("wineModalBody");
@@ -596,6 +823,7 @@
         const vivinoLink = hasVivino
           ? `<a href="${escapeAttr(text(row.vivino_url))}" target="_blank" rel="noopener">Open on Vivino</a>`
           : "";
+        const badgesModal = formatGwBadgesModal(row.gw_badges);
 
         bodyEl.innerHTML = `
           <header class="modal-head">
@@ -608,6 +836,7 @@
             <span class="pill">${escapeHtml(text(row.gw_price || "-"))}</span>
             ${ratingPill}
           </div>
+          ${badgesModal}
           ${descBlock}
           <div class="modal-links">
             <a href="${escapeAttr(text(row.grape_witches_url))}" target="_blank" rel="noopener">Grape Witches product page</a>
@@ -689,6 +918,7 @@
                     <a href="${escapeAttr(gwUrl)}" target="_blank" rel="noopener">Grape Witches</a>
                     ${vivinoLink}
                   </div>
+                  ${formatGwBadgesCard(r.gw_badges, slugForBadgesId(gwUrl))}
                   <div class="desc-wrap">
                     <div class="desc">${escapeHtml(descNeedsMore ? descPreview : description)}</div>
                     ${

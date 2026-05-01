@@ -4,6 +4,7 @@ import unittest
 from pathlib import Path
 
 from scripts.parse_try_buy_eml import (
+    extract_gw_badges,
     extract_gw_meta,
     extract_wines_from_tokens,
     parse_eml_plaintext,
@@ -84,6 +85,25 @@ class ParseTryBuyEmlTests(unittest.TestCase):
         self.assertNotIn("named after the Hi", description or "")
         self.assertIsNone(thumb)
         self.assertEqual(description, excerpt)
+
+    def test_extract_gw_badges_from_bottomline_tags(self) -> None:
+        html = """
+        <ul class="bottomline-tags">
+        <li class="taglist"><img src="https://cdn.example.com/freaky.png">
+          <span class="badge-content"><i>Freaky Level 1 </i> <br> Natural wine isn't *always* freaky! </span>
+        </li>
+        <li class="taglist"><img src="https://cdn.example.com/bangers.png">
+          <span class="badge-content"><i> Weekday Bangers </i><br> Tuesday-friendly with incredible value.</span>
+        </li>
+        </ul>
+        """
+        badges = extract_gw_badges(html)
+        self.assertEqual(len(badges), 2)
+        self.assertEqual(badges[0]["image_url"], "https://cdn.example.com/freaky.png")
+        self.assertEqual(badges[0]["label"], "Freaky Level 1")
+        self.assertIn("freaky", badges[0]["description"].lower())
+        self.assertEqual(badges[1]["label"], "Weekday Bangers")
+        self.assertIn("Tuesday-friendly", badges[1]["description"])
 
     def test_extract_gw_prefers_jsonld_product_description(self) -> None:
         html = """

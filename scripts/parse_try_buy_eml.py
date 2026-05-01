@@ -110,6 +110,7 @@ class WineRecord:
     gw_thumbnail_url: str | None = None
     gw_price: str | None = None
     gw_source_excerpt: str | None = None
+    gw_badges: list[dict] = field(default_factory=list)
     vivino_rating: float | None = None
     vivino_num_ratings: int | None = None
     vivino_url: str | None = None
@@ -393,6 +394,48 @@ def extract_gw_meta(html: str) -> tuple[str | None, str | None, str | None, str 
     return title, desc, thumbnail, price, excerpt
 
 
+def extract_gw_badges(html: str) -> list[dict[str, str]]:
+    """Grape Witches product tags (icons + titles + blurbs) from the bottomline-tags list."""
+    block_match = re.search(
+        r'<ul class="bottomline-tags"\s*>(.*?)</ul>',
+        html,
+        flags=re.DOTALL | re.IGNORECASE,
+    )
+    if not block_match:
+        return []
+    block = block_match.group(1)
+    pattern = re.compile(
+        r'<li class="taglist"[^>]*>\s*<img[^>]*src="([^"]+)"[^>]*>\s*'
+        r'<span class="badge-content">(.*?)</span>\s*</li>',
+        re.DOTALL | re.IGNORECASE,
+    )
+    badges: list[dict[str, str]] = []
+    seen: set[tuple[str, str]] = set()
+    for m in pattern.finditer(block):
+        img_url = m.group(1).strip()
+        inner = m.group(2)
+        title_m = re.search(r"<i>(.*?)</i>", inner, re.DOTALL | re.IGNORECASE)
+        label = normalize_text(re.sub(r"<[^>]+>", " ", title_m.group(1))) if title_m else ""
+        parts = re.split(r"<br\s*/?>", inner, maxsplit=1, flags=re.IGNORECASE)
+        description = ""
+        if len(parts) > 1:
+            description = normalize_text(re.sub(r"<[^>]+>", " ", parts[1]))
+        elif not label:
+            description = normalize_text(re.sub(r"<[^>]+>", " ", inner))
+        key = (img_url, label)
+        if key in seen:
+            continue
+        seen.add(key)
+        badges.append(
+            {
+                "image_url": img_url,
+                "label": label,
+                "description": description,
+            }
+        )
+    return badges
+
+
 def search_vivino_candidates(record: WineRecord, fetcher: Callable[[str], str], max_pages: int = 3) -> list[str]:
     forced_url = override_vivino_url(record)
     if forced_url:
@@ -565,8 +608,10 @@ def enrich_records(records: list[WineRecord], fetcher: Callable[[str], str], del
             record.gw_thumbnail_url = thumbnail
             record.gw_price = price
             record.gw_source_excerpt = excerpt
+            record.gw_badges = extract_gw_badges(gw_html)
         except Exception as exc:
             record.gw_source_excerpt = f"Failed to fetch Grape Witches page: {exc}"
+            record.gw_badges = []
 
         if is_not_on_vivino(record):
             record.vivino_rating = None
@@ -646,6 +691,7 @@ def write_outputs(records: list[WineRecord], out_json: Path, out_csv: Path) -> N
                 "vivino_confidence",
                 "vivino_match_reason",
                 "needs_review",
+                "gw_badges_json",
             ],
         )
         writer.writeheader()
@@ -669,6 +715,7 @@ def write_outputs(records: list[WineRecord], out_json: Path, out_csv: Path) -> N
                     "vivino_confidence": rec.vivino_confidence,
                     "vivino_match_reason": rec.vivino_match_reason,
                     "needs_review": rec.needs_review,
+                    "gw_badges_json": json.dumps(rec.gw_badges, ensure_ascii=False) if rec.gw_badges else "",
                 }
             )
 
