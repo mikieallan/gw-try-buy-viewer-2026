@@ -221,14 +221,20 @@
       .table-wrap {
         margin-top: 16px;
         overflow-x: auto;
+        overflow-y: visible;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior-x: contain;
         border: 1px solid var(--gw-border-soft);
         border-radius: var(--gw-radius);
         background: var(--gw-surface);
         box-shadow: var(--gw-shadow);
+        max-width: 100%;
       }
 
+      /* Avoid dead horizontal space: table is only as wide as columns need, but at least full panel width. */
       table.wine-table {
-        width: 100%;
+        width: max-content;
+        min-width: 100%;
         border-collapse: collapse;
         font-size: 15px;
       }
@@ -256,6 +262,18 @@
 
       .wine-table tbody tr:last-child td {
         border-bottom: none;
+      }
+
+      .wine-table td:nth-child(2),
+      .wine-table th:nth-child(2) {
+        word-break: break-word;
+        overflow-wrap: anywhere;
+        hyphens: auto;
+      }
+
+      .wine-table td:last-child,
+      .wine-table th:last-child {
+        vertical-align: top;
       }
 
       .col-thumb {
@@ -301,6 +319,7 @@
       .wine-name a {
         color: inherit;
         text-decoration: none;
+        overflow-wrap: anywhere;
       }
 
       .wine-name a:hover {
@@ -350,6 +369,7 @@
         flex-wrap: wrap;
         gap: 5px;
         align-items: center;
+        max-width: 100%;
       }
 
       .list-badge-wrap {
@@ -357,6 +377,7 @@
         display: inline-flex;
         z-index: 1;
         line-height: 0;
+        isolation: isolate;
       }
 
       .list-badge-wrap:hover,
@@ -395,8 +416,8 @@
         left: 50%;
         top: calc(100% + 8px);
         transform: translateX(-50%);
-        width: max-content;
-        max-width: min(240px, 70vw);
+        width: auto;
+        max-width: min(240px, calc(100vw - 48px));
         padding: 8px 10px;
         background: var(--gw-surface);
         border: 1px solid var(--gw-border);
@@ -446,6 +467,32 @@
         color: var(--gw-muted);
         margin-bottom: 4px;
         font-size: 14px;
+      }
+
+      @media (max-width: 640px) {
+        .container {
+          padding-left: 16px;
+          padding-right: 16px;
+        }
+
+        .wine-table th,
+        .wine-table td {
+          padding: 10px 10px;
+        }
+
+        .col-thumb {
+          width: 52px;
+        }
+
+        .wine-table th:nth-child(2),
+        .wine-table td:nth-child(2) {
+          max-width: min(240px, 62vw);
+        }
+
+        .wine-table th:last-child,
+        .wine-table td:last-child {
+          max-width: 118px;
+        }
       }
     </style>
   </head>
