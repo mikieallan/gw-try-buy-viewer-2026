@@ -685,6 +685,37 @@
         return (value ?? "").toString();
       }
 
+      function fingerprintLabel(s) {
+        return text(s).toLowerCase().replace(/[^a-z0-9]+/g, "");
+      }
+
+      /** True when producer + cuvee say the same thing as the card title (only punctuation/spacing differs). */
+      function isProducerCuveeRedundantWithTitle(displayName, producer, cuvee) {
+        const titleFp = fingerprintLabel(displayName);
+        if (!titleFp) {
+          return false;
+        }
+        const combined = [producer, cuvee].map(text).filter((p) => p.trim()).join(" ");
+        if (!combined) {
+          return true;
+        }
+        return fingerprintLabel(combined) === titleFp;
+      }
+
+      function fallbackMetaLine(row, displayName) {
+        const producer = text(row.producer);
+        const cuvee = text(row.cuvee);
+        if (!isProducerCuveeRedundantWithTitle(displayName, row.producer, row.cuvee) && (producer || cuvee)) {
+          const sep = producer && cuvee ? " · " : "";
+          return `<div class="small muted">${escapeHtml(producer)}${sep}${escapeHtml(cuvee)}</div>`;
+        }
+        const geo = [text(row.grapes), text(row.region_country)].filter(Boolean).join(" · ");
+        if (geo && fingerprintLabel(geo) !== fingerprintLabel(displayName)) {
+          return `<div class="small muted">${escapeHtml(geo)}</div>`;
+        }
+        return "";
+      }
+
       function groupByCategory(data) {
         const grouped = new Map();
         for (const row of data) {
@@ -794,9 +825,10 @@
               ${grapes ? `<div><span class="lbl">Grape</span>${escapeHtml(grapes)}</div>` : ""}
               ${region ? `<div><span class="lbl">Region</span>${escapeHtml(region)}</div>` : ""}
             </div>`
-          : `<p class="small muted" style="margin:0 0 10px">${escapeHtml(text(row.producer))} · ${escapeHtml(
-              text(row.cuvee),
-            )}</p>`;
+          : (() => {
+              const meta = fallbackMetaLine(row, displayName);
+              return meta ? `<div style="margin:0 0 10px">${meta}</div>` : "";
+            })();
 
         const hasVivino = row.vivino_url != null && String(row.vivino_url).trim() !== "";
         const hasRating = row.vivino_rating != null;
@@ -895,8 +927,7 @@
                   ${grapes ? `<div><span class="lbl">Grape</span>${escapeHtml(grapes)}</div>` : ""}
                   ${region ? `<div><span class="lbl">Region</span>${escapeHtml(region)}</div>` : ""}
                 </div>`
-              : `<h3 class="card-title">${escapeHtml(displayName)}</h3>
-                 <div class="small muted">${escapeHtml(text(r.producer))} · ${escapeHtml(text(r.cuvee))}</div>`;
+              : `<h3 class="card-title">${escapeHtml(displayName)}</h3>${fallbackMetaLine(r, displayName)}`;
 
             return `
               <article class="wine-card">
